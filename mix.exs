@@ -2,7 +2,7 @@ defmodule UeberauthGoogle.Mixfile do
   use Mix.Project
 
   @version "0.10.0"
-  @url "https://github.com/ueberauth/ueberauth_google"
+  @url "https://github.com/ChannexIO/ueberauth_google"
 
   def project do
     [app: :ueberauth_google,
@@ -44,7 +44,7 @@ defmodule UeberauthGoogle.Mixfile do
 
   defp package do
     [files: ["lib", "mix.exs", "README.md", "LICENSE"],
-     maintainers: ["Sean Callan"],
+     maintainers: ["Andrew Yudin"],
      licenses: ["MIT"],
      links: %{"GitHub": @url}]
   end

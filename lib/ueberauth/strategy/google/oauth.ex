@@ -11,11 +11,11 @@ defmodule Ueberauth.Strategy.Google.OAuth do
   use OAuth2.Strategy
 
   @defaults [
-     strategy: __MODULE__,
-     site: "https://accounts.google.com",
-     authorize_url: "/o/oauth2/v2/auth",
-     token_url: "https://www.googleapis.com/oauth2/v4/token"
-   ]
+    strategy: __MODULE__,
+    site: "https://accounts.google.com",
+    authorize_url: "/o/oauth2/v2/auth",
+    token_url: "https://www.googleapis.com/oauth2/v4/token"
+  ]
 
   @doc """
   Construct a client for requests to Google.
@@ -44,7 +44,7 @@ defmodule Ueberauth.Strategy.Google.OAuth do
 
   def get(token, url, headers \\ [], opts \\ []) do
     [token: token]
-    |> client
+    |> client()
     |> put_param("client_secret", client().client_secret)
     |> OAuth2.Client.get(url, headers, opts)
   end
@@ -53,9 +53,11 @@ defmodule Ueberauth.Strategy.Google.OAuth do
     case opts |> client |> OAuth2.Client.get_token(params) do
       {:error, %{body: %{"error" => error, "error_description" => description}}} ->
         {:error, {error, description}}
+
       {:ok, %{token: %{access_token: nil} = token}} ->
         %{"error" => error, "error_description" => description} = token.other_params
         {:error, {error, description}}
+
       {:ok, %{token: token}} ->
         {:ok, token}
     end

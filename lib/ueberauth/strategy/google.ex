@@ -45,8 +45,24 @@ defmodule Ueberauth.Strategy.Google do
     case Ueberauth.Strategy.Google.OAuth.get_access_token(params, opts) do
       {:ok, token} ->
         fetch_user(conn, token)
+
       {:error, {error_code, error_description}} ->
         set_errors!(conn, [error(error_code, error_description)])
+    end
+  end
+
+  @doc """
+  Handles the callback from app.
+  """
+  def handle_callback!(%Plug.Conn{params: %{"id_token" => id_token}} = conn) do
+    client = Ueberauth.Strategy.Google.OAuth.client()
+
+    case verify_token(conn, client, id_token) do
+      {:ok, user} ->
+        put_user(conn, user)
+
+      {:error, reason} ->
+        set_errors!(conn, [error("token", reason)])
     end
   end
 
@@ -78,9 +94,9 @@ defmodule Ueberauth.Strategy.Google do
   Includes the credentials from the google response.
   """
   def credentials(conn) do
-    token        = conn.private.google_token
-    scope_string = (token.other_params["scope"] || "")
-    scopes       = String.split(scope_string, ",")
+    token = conn.private.google_token
+    scope_string = token.other_params["scope"] || ""
+    scopes = String.split(scope_string, ",")
 
     %Credentials{
       expires: !!token.expires_at,
@@ -133,8 +149,10 @@ defmodule Ueberauth.Strategy.Google do
       case option(conn, :userinfo_endpoint) do
         {:system, varname, default} ->
           System.get_env(varname) || default
+
         {:system, varname} ->
           System.get_env(varname) || Keyword.get(default_options(), :userinfo_endpoint)
+
         other ->
           other
       end
@@ -144,13 +162,22 @@ defmodule Ueberauth.Strategy.Google do
     case resp do
       {:ok, %OAuth2.Response{status_code: 401, body: _body}} ->
         set_errors!(conn, [error("token", "unauthorized")])
+
       {:ok, %OAuth2.Response{status_code: status_code, body: user}} when status_code in 200..399 ->
         put_private(conn, :google_user, user)
+
       {:error, %OAuth2.Response{status_code: status_code}} ->
         set_errors!(conn, [error("OAuth2", status_code)])
+
       {:error, %OAuth2.Error{reason: reason}} ->
         set_errors!(conn, [error("OAuth2", reason)])
     end
+  end
+
+  defp put_user(conn, user) do
+    token = %OAuth2.AccessToken{}
+    conn = put_private(conn, :google_token, token)
+    put_private(conn, :google_user, user)
   end
 
   defp with_param(opts, key, conn) do
@@ -174,5 +201,27 @@ defmodule Ueberauth.Strategy.Google do
 
   defp option(conn, key) do
     Keyword.get(options(conn), key, Keyword.get(default_options(), key))
+  end
+
+  def verify_token(_conn, client, id_token) do
+    url = "https://www.googleapis.com/oauth2/v3/tokeninfo"
+    params = %{"id_token" => id_token}
+    resp = OAuth2.Client.get(client, url, [], params: params)
+
+    case resp do
+      {:ok, %OAuth2.Response{status_code: 200, body: %{"aud" => aud} = body}} ->
+        if Enum.member?(allowed_client_ids(), aud) do
+          {:ok, body}
+        else
+          {:error, "Unknown client id #{aud}"}
+        end
+
+      _ ->
+        {:error, "Token verification failed"}
+    end
+  end
+
+  defp allowed_client_ids() do
+    Application.get_env(:ueberauth, Ueberauth.Strategy.Google.OAuth)[:allowed_client_ids]
   end
 end
