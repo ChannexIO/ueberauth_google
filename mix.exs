@@ -1,22 +1,24 @@
 defmodule UeberauthGoogle.Mixfile do
   use Mix.Project
 
-  @version "0.10.0"
+  @version "0.10.2"
   @url "https://github.com/ChannexIO/ueberauth_google"
 
   def project do
-    [app: :ueberauth_google,
-     version: @version,
-     name: "Ueberauth Google Strategy",
-     package: package(),
-     elixir: "~> 1.3",
-     build_embedded: Mix.env == :prod,
-     start_permanent: Mix.env == :prod,
-     source_url: @url,
-     homepage_url: @url,
-     description: description(),
-     deps: deps(),
-     docs: docs()]
+    [
+      app: :ueberauth_google,
+      version: @version,
+      name: "Ueberauth Google Strategy",
+      package: package(),
+      elixir: "~> 1.3",
+      build_embedded: Mix.env() == :prod,
+      start_permanent: Mix.env() == :prod,
+      source_url: @url,
+      homepage_url: @url,
+      description: description(),
+      deps: deps(),
+      docs: docs()
+    ]
   end
 
   def application do
@@ -25,12 +27,11 @@ defmodule UeberauthGoogle.Mixfile do
 
   defp deps do
     [
-     {:oauth2, "~> 1.0 or ~> 2.0"},
-     {:ueberauth, "~> 0.6.3"},
-
-     {:credo, ">= 0.0.0", only: [:dev, :test], runtime: false},
-     {:ex_doc, ">= 0.0.0", only: [:dev], runtime: false},
-     {:mock, "~> 0.3", only: :test}
+      {:oauth2, "~> 1.0 or ~> 2.0"},
+      {:ueberauth, "~> 0.6.3"},
+      {:credo, ">= 0.0.0", only: [:dev, :test], runtime: false},
+      {:ex_doc, ">= 0.0.0", only: [:dev], runtime: false},
+      {:mock, "~> 0.3", only: :test}
     ]
   end
 
@@ -43,9 +44,11 @@ defmodule UeberauthGoogle.Mixfile do
   end
 
   defp package do
-    [files: ["lib", "mix.exs", "README.md", "LICENSE"],
-     maintainers: ["Andrew Yudin"],
-     licenses: ["MIT"],
-     links: %{"GitHub": @url}]
+    [
+      files: ["lib", "mix.exs", "README.md", "LICENSE"],
+      maintainers: ["Andrew Yudin"],
+      licenses: ["MIT"],
+      links: %{GitHub: @url}
+    ]
   end
 end

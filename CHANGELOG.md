@@ -1,6 +1,10 @@
 # Changelog
 
-## v0.11.0 (Unreleased)
+## v0.10.2
+
+* Add parsing and converting to list for env allowed_ids
+
+## v0.10.1
 
 * Support token-based workflow
 

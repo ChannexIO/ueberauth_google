@@ -222,6 +222,11 @@ defmodule Ueberauth.Strategy.Google do
   end
 
   defp allowed_client_ids() do
-    Application.get_env(:ueberauth, Ueberauth.Strategy.Google.OAuth)[:allowed_client_ids]
+    env = Application.get_env(:ueberauth, Ueberauth.Strategy.Google.OAuth)[:allowed_client_ids]
+
+    case env do
+      nil -> []
+      allowed_client_ids -> String.split(allowed_client_ids, ":", trim: true)
+    end
   end
 end
