@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.10.3
+
+* Add custom http scheme
+
 ## v0.10.2
 
 * Add parsing and converting to list for env allowed_ids

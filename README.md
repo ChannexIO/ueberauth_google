@@ -95,6 +95,15 @@ config :ueberauth, Ueberauth,
   ]
 ```
 
+You can also use custom callback URl and HTTP schema
+
+```elixir
+config :ueberauth, Ueberauth,
+  providers: [
+    google: {Ueberauth.Strategy.Google, [callback_uri: "/alternative/google", proto_scheme: :https]}
+  ]
+```
+
 You can also pass options such as the `hd` parameter to suggest a particular Google Apps hosted domain (caution, can still be overridden by the user), `prompt` and `access_type` options to request refresh_tokens and offline access (both have to be present), or `include_granted_scopes` parameter to allow [incremental authorization](https://developers.google.com/identity/protocols/oauth2/web-server#incrementalAuth).
 
 ```elixir

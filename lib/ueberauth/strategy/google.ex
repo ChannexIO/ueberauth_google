@@ -31,8 +31,22 @@ defmodule Ueberauth.Strategy.Google do
       |> with_param(:login_hint, conn)
       |> with_param(:state, conn)
 
-    opts = oauth_client_options_from_conn(conn)
+    opts =
+      conn
+      |> set_proto_scheme(options(conn)[:proto_scheme])
+      |> oauth_client_options_from_conn()
+
     redirect!(conn, Ueberauth.Strategy.Google.OAuth.authorize_url!(params, opts))
+  end
+
+  defp set_proto_scheme(conn, nil), do: conn
+
+  defp set_proto_scheme(conn, proto_scheme) do
+    header = {"x-forwarded-proto", to_string(proto_scheme)}
+
+    conn
+    |> Map.put(:scheme, proto_scheme)
+    |> Map.update(:req_headers, [header], &[header | &1])
   end
 
   @doc """
