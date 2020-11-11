@@ -31,10 +31,7 @@ defmodule Ueberauth.Strategy.Google do
       |> with_param(:login_hint, conn)
       |> with_param(:state, conn)
 
-    opts =
-      conn
-      |> set_proto_scheme(options(conn)[:proto_scheme])
-      |> oauth_client_options_from_conn()
+    opts = oauth_client_options_from_conn(conn)
 
     redirect!(conn, Ueberauth.Strategy.Google.OAuth.authorize_url!(params, opts))
   end
@@ -54,6 +51,7 @@ defmodule Ueberauth.Strategy.Google do
   """
   def handle_callback!(%Plug.Conn{params: %{"code" => code}} = conn) do
     params = [code: code]
+
     opts = oauth_client_options_from_conn(conn)
 
     case Ueberauth.Strategy.Google.OAuth.get_access_token(params, opts) do
@@ -203,7 +201,8 @@ defmodule Ueberauth.Strategy.Google do
   end
 
   defp oauth_client_options_from_conn(conn) do
-    base_options = [redirect_uri: callback_url(conn)]
+    opts = set_proto_scheme(conn, options(conn)[:proto_scheme])
+    base_options = [redirect_uri: callback_url(opts)]
     request_options = conn.private[:ueberauth_request_options].options
 
     case {request_options[:client_id], request_options[:client_secret]} do

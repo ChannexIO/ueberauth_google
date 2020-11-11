@@ -1,8 +1,12 @@
 # Changelog
 
+## v0.10.4
+
+* Add custom http scheme on callback_url for callback pipeline
+
 ## v0.10.3
 
-* Add custom http scheme
+* Add custom http scheme on callback_url for request pipeline
 
 ## v0.10.2
 
