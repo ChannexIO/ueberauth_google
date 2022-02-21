@@ -7,7 +7,8 @@ defmodule Ueberauth.Strategy.Google do
     uid_field: :sub,
     default_scope: "email",
     hd: nil,
-    userinfo_endpoint: "https://www.googleapis.com/oauth2/v3/userinfo"
+    userinfo_endpoint: "https://www.googleapis.com/oauth2/v3/userinfo",
+    ignores_csrf_attack: true
 
   alias Ueberauth.Auth.Info
   alias Ueberauth.Auth.Credentials
