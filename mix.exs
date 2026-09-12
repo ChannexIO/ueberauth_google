@@ -29,7 +29,8 @@ defmodule UeberauthGoogle.Mixfile do
       {:ueberauth, "~> 0.10.0"},
       {:credo, ">= 0.0.0", only: [:dev, :test], runtime: false},
       {:ex_doc, ">= 0.0.0", only: [:dev], runtime: false},
-      {:mock, "~> 0.3", only: :test}
+      {:mock, "~> 0.3", only: :test},
+      {:meck, "~> 1.2", only: :test, override: true}
     ]
   end
 

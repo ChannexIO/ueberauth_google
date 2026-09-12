@@ -7,7 +7,8 @@ defmodule Ueberauth.Strategy.Google do
     uid_field: :sub,
     default_scope: "email",
     hd: nil,
-    userinfo_endpoint: "https://www.googleapis.com/oauth2/v3/userinfo"
+    userinfo_endpoint: "https://www.googleapis.com/oauth2/v3/userinfo",
+    ignores_csrf_attack: true
 
   alias Ueberauth.Auth.Info
   alias Ueberauth.Auth.Credentials
@@ -30,10 +31,21 @@ defmodule Ueberauth.Strategy.Google do
       |> with_param(:prompt, conn)
       |> with_param(:login_hint, conn)
       |> with_param(:hl, conn)
-      |> with_state_param(conn)
+      |> with_param(:state, conn)
 
     opts = oauth_client_options_from_conn(conn)
+
     redirect!(conn, Ueberauth.Strategy.Google.OAuth.authorize_url!(params, opts))
+  end
+
+  defp set_proto_scheme(conn, nil), do: conn
+
+  defp set_proto_scheme(conn, proto_scheme) do
+    header = {"x-forwarded-proto", to_string(proto_scheme)}
+
+    conn
+    |> Map.put(:scheme, proto_scheme)
+    |> Map.update(:req_headers, [header], &[header | &1])
   end
 
   @doc """
@@ -41,6 +53,7 @@ defmodule Ueberauth.Strategy.Google do
   """
   def handle_callback!(%Plug.Conn{params: %{"code" => code}} = conn) do
     params = [code: code]
+
     opts = oauth_client_options_from_conn(conn)
 
     case Ueberauth.Strategy.Google.OAuth.get_access_token(params, opts) do
@@ -49,6 +62,20 @@ defmodule Ueberauth.Strategy.Google do
 
       {:error, {error_code, error_description}} ->
         set_errors!(conn, [error(error_code, error_description)])
+    end
+  end
+
+  # Handles the callback from the mobile app, which sends an id_token
+  # instead of an authorization code.
+  def handle_callback!(%Plug.Conn{params: %{"id_token" => id_token}} = conn) do
+    client = Ueberauth.Strategy.Google.OAuth.client()
+
+    case verify_token(conn, client, id_token) do
+      {:ok, user} ->
+        put_user(conn, user)
+
+      {:error, reason} ->
+        set_errors!(conn, [error("token", reason)])
     end
   end
 
@@ -82,7 +109,7 @@ defmodule Ueberauth.Strategy.Google do
   def credentials(conn) do
     token = conn.private.google_token
     scope_string = token.other_params["scope"] || ""
-    scopes = String.split(scope_string, " ")
+    scopes = String.split(scope_string, ",")
 
     %Credentials{
       expires: !!token.expires_at,
@@ -162,6 +189,12 @@ defmodule Ueberauth.Strategy.Google do
     end
   end
 
+  defp put_user(conn, user) do
+    token = %OAuth2.AccessToken{}
+    conn = put_private(conn, :google_token, token)
+    put_private(conn, :google_user, user)
+  end
+
   defp with_param(opts, key, conn) do
     if value = conn.params[to_string(key)], do: Keyword.put(opts, key, value), else: opts
   end
@@ -171,7 +204,8 @@ defmodule Ueberauth.Strategy.Google do
   end
 
   defp oauth_client_options_from_conn(conn) do
-    base_options = [redirect_uri: callback_url(conn)]
+    opts = set_proto_scheme(conn, options(conn)[:proto_scheme])
+    base_options = [redirect_uri: callback_url(opts)]
     request_options = conn.private[:ueberauth_request_options].options
 
     case {request_options[:client_id], request_options[:client_secret]} do
@@ -183,5 +217,32 @@ defmodule Ueberauth.Strategy.Google do
 
   defp option(conn, key) do
     Keyword.get(options(conn), key, Keyword.get(default_options(), key))
+  end
+
+  def verify_token(_conn, client, id_token) do
+    url = "https://www.googleapis.com/oauth2/v3/tokeninfo"
+    params = %{"id_token" => id_token}
+    resp = OAuth2.Client.get(client, url, [], params: params)
+
+    case resp do
+      {:ok, %OAuth2.Response{status_code: 200, body: %{"aud" => aud} = body}} ->
+        if Enum.member?(allowed_client_ids(), aud) do
+          {:ok, body}
+        else
+          {:error, "Unknown client id #{aud}"}
+        end
+
+      _ ->
+        {:error, "Token verification failed"}
+    end
+  end
+
+  defp allowed_client_ids() do
+    env = Application.get_env(:ueberauth, Ueberauth.Strategy.Google.OAuth)[:allowed_client_ids]
+
+    case env do
+      nil -> []
+      allowed_client_ids -> String.split(allowed_client_ids, ":", trim: true)
+    end
   end
 end
