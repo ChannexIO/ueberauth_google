@@ -149,8 +149,11 @@ defmodule Ueberauth.Strategy.GoogleTest do
     System.delete_env("UEBERAUTH_SCOOBY_DOO")
   end
 
-  test "state param is present in the redirect uri" do
-    conn = conn(:get, "/auth/google", %{})
+  # This strategy sets ignores_csrf_attack: true and passes the caller's own
+  # state through, rather than generating one with with_state_param/1. The
+  # mobile app flow supplies the state itself.
+  test "the caller state param reaches the redirect uri" do
+    conn = conn(:get, "/auth/google", %{"state" => "caller-state"})
 
     routes = Ueberauth.init()
     resp = Ueberauth.call(conn, routes)
@@ -159,7 +162,18 @@ defmodule Ueberauth.Strategy.GoogleTest do
 
     redirect_uri = URI.parse(location)
 
-    assert redirect_uri.query =~ "state="
+    assert redirect_uri.query =~ "state=caller-state"
+  end
+
+  test "no state param reaches the redirect uri when the caller sends none" do
+    conn = conn(:get, "/auth/google", %{})
+
+    routes = Ueberauth.init()
+    resp = Ueberauth.call(conn, routes)
+
+    assert [location] = get_resp_header(resp, "location")
+
+    refute URI.parse(location).query =~ "state="
   end
 
   describe "error handling" do
